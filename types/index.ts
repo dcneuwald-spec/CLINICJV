@@ -221,6 +221,7 @@ export interface Lead {
   score: number
   interest?: string
   notes?: string
+  lostReason?: string
   createdAt: string
   updatedAt: string
 }
