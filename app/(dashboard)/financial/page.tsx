@@ -1,22 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Header } from '@/components/layout/header'
 import {
   DollarSign, TrendingUp, TrendingDown, AlertCircle,
-  Plus, Filter, Download, ArrowUpRight, ArrowDownRight,
-  CheckCircle2, Clock, XCircle,
+  Plus, ArrowUpRight, ArrowDownRight,
+  CheckCircle2, Clock, XCircle, Download,
 } from 'lucide-react'
 import {
   AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
 import {
-  MOCK_TRANSACTIONS, MONTHLY_REVENUE,
-} from '@/lib/mock-data'
-import {
   cn, formatCurrency, formatDate, getTransactionStatusLabel, getPaymentMethodLabel,
 } from '@/lib/utils'
-import type { TransactionType, TransactionStatus } from '@/types'
+import type { FinancialTransaction, TransactionType, TransactionStatus } from '@/types'
 
 const SUB_TABS = [
   { id: 'overview', label: 'Visão Geral' },
@@ -30,19 +27,34 @@ export default function FinancialPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [typeFilter, setTypeFilter] = useState<'all' | TransactionType>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | TransactionStatus>('all')
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const income = MOCK_TRANSACTIONS.filter(t => t.type === 'INCOME')
-  const expenses = MOCK_TRANSACTIONS.filter(t => t.type === 'EXPENSE')
+  const load = useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (typeFilter !== 'all') params.set('type', typeFilter)
+    if (statusFilter !== 'all') params.set('status', statusFilter)
+    const res = await fetch(`/api/financial?${params}`)
+    if (res.ok) setTransactions(await res.json())
+    setLoading(false)
+  }, [typeFilter, statusFilter])
+
+  useEffect(() => { load() }, [load])
+
+  const markAsPaid = async (id: string) => {
+    const res = await fetch(`/api/financial/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'PAID', paidDate: new Date().toISOString() }) })
+    if (res.ok) { const updated = await res.json(); setTransactions(prev => prev.map(t => t.id === id ? updated : t)) }
+  }
+
+  const income = transactions.filter(t => t.type === 'INCOME')
+  const expenses = transactions.filter(t => t.type === 'EXPENSE')
   const totalIncome = income.filter(t => t.status === 'PAID').reduce((s, t) => s + t.amountPaid, 0)
   const totalExpenses = expenses.filter(t => t.status === 'PAID').reduce((s, t) => s + t.amountPaid, 0)
-  const totalPending = MOCK_TRANSACTIONS.filter(t => t.status === 'PENDING').reduce((s, t) => s + t.amount, 0)
-  const totalOverdue = MOCK_TRANSACTIONS.filter(t => t.status === 'OVERDUE').reduce((s, t) => s + t.amount, 0)
+  const totalPending = transactions.filter(t => t.status === 'PENDING').reduce((s, t) => s + t.amount, 0)
+  const totalOverdue = transactions.filter(t => t.status === 'OVERDUE').reduce((s, t) => s + t.amount, 0)
 
-  const filtered = MOCK_TRANSACTIONS.filter(t => {
-    const matchType = typeFilter === 'all' || t.type === typeFilter
-    const matchStatus = statusFilter === 'all' || t.status === statusFilter
-    return matchType && matchStatus
-  })
+  const filtered = transactions
 
   return (
     <div className="animate-fade-in">
@@ -127,7 +139,7 @@ export default function FinancialPage() {
                 <h3 className="text-sm font-semibold text-slate-800">Evolução de Receita e Despesas</h3>
               </div>
               <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={MONTHLY_REVENUE} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
+                <AreaChart data={[]} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
                   <defs>
                     <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
@@ -167,17 +179,16 @@ export default function FinancialPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_TRANSACTIONS.map(tx => (
+                  {loading ? (
+                    <tr><td colSpan={8} className="text-center text-slate-400 py-8">Carregando...</td></tr>
+                  ) : filtered.map(tx => (
                     <tr key={tx.id}>
                       <td className="text-slate-500">{formatDate(tx.dueDate)}</td>
                       <td className="font-medium">{tx.description}</td>
-                      <td className="text-slate-500">{tx.patientName || '—'}</td>
+                      <td className="text-slate-500">{(tx as any).patientName || '—'}</td>
                       <td className="text-slate-500">{tx.paymentMethod ? getPaymentMethodLabel(tx.paymentMethod) : '—'}</td>
                       <td>
-                        <span className={cn(
-                          'badge text-xs',
-                          tx.type === 'INCOME' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700',
-                        )}>
+                        <span className={cn('badge text-xs', tx.type === 'INCOME' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')}>
                           {tx.type === 'INCOME' ? 'Receita' : 'Despesa'}
                         </span>
                       </td>
@@ -185,15 +196,14 @@ export default function FinancialPage() {
                         {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(tx.amount)}
                       </td>
                       <td>
-                        <span className={cn(
-                          'badge text-xs',
-                          tx.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' :
-                          tx.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
-                          tx.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                          'bg-slate-100 text-slate-500',
-                        )}>
+                        <span className={cn('badge text-xs', tx.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : tx.status === 'OVERDUE' ? 'bg-red-100 text-red-700' : tx.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500')}>
                           {getTransactionStatusLabel(tx.status)}
                         </span>
+                      </td>
+                      <td>
+                        {(tx.status === 'PENDING' || tx.status === 'OVERDUE') && (
+                          <button onClick={() => markAsPaid(tx.id)} className="text-xs text-brand-600 hover:underline whitespace-nowrap">Marcar Pago</button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -279,7 +289,7 @@ export default function FinancialPage() {
           <div className="card p-5">
             <h3 className="text-sm font-semibold text-slate-800 mb-4">Fluxo de Caixa — 6 meses</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={MONTHLY_REVENUE} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
+              <AreaChart data={[]} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
                 <defs>
                   <linearGradient id="entradaGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.15} />
@@ -318,18 +328,18 @@ export default function FinancialPage() {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_TRANSACTIONS
+                {transactions
                   .filter(t => activeTab === 'receivable' ? t.type === 'INCOME' : t.type === 'EXPENSE')
                   .map(tx => (
                     <tr key={tx.id}>
                       <td>{formatDate(tx.dueDate)}</td>
                       <td className="font-medium">{tx.description}</td>
-                      {activeTab === 'receivable' && <td className="text-slate-500">{tx.patientName || '—'}</td>}
+                      {activeTab === 'receivable' && <td className="text-slate-500">{(tx as any).patientName || '—'}</td>}
                       <td className="font-semibold">{formatCurrency(tx.amount)}</td>
                       <td>
                         <span className={cn(
                           'badge text-xs',
-                          tx.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' :
+                          tx.status === 'PAID'    ? 'bg-emerald-100 text-emerald-700' :
                           tx.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
                           'bg-amber-100 text-amber-700',
                         )}>
@@ -338,7 +348,7 @@ export default function FinancialPage() {
                       </td>
                       <td>
                         {tx.status !== 'PAID' && (
-                          <button className="btn-secondary text-xs py-1 px-2">
+                          <button onClick={() => markAsPaid(tx.id)} className="btn-secondary text-xs py-1 px-2">
                             <CheckCircle2 size={12} className="text-emerald-500" /> Baixar
                           </button>
                         )}

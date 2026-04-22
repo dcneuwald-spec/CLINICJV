@@ -1,13 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/header'
 import {
-  Plus, Search, Filter, TrendingUp, Users, Target, DollarSign,
-  ChevronRight, MessageCircle, Phone, Calendar, ArrowRight,
-  Megaphone, BarChart3, ExternalLink,
+  Plus, Search, TrendingUp, Users, Target, DollarSign,
+  MessageCircle, Phone, Calendar, ExternalLink, Megaphone, BarChart3,
 } from 'lucide-react'
-import { MOCK_LEADS, MOCK_CAMPAIGNS } from '@/lib/mock-data'
 import {
   cn, formatCurrency, formatDate, getInitials, getLeadStatusLabel,
 } from '@/lib/utils'
@@ -36,6 +34,24 @@ const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
   whatsapp:  { label: 'WhatsApp',   color: 'bg-green-100 text-green-700' },
   email:     { label: 'E-mail',     color: 'bg-slate-100 text-slate-600' },
 }
+
+const MOCK_CAMPAIGNS = [
+  {
+    id: '1', name: 'Captação — Limpeza e Profilaxia', platform: 'meta',
+    status: 'active', spent: 1800, budget: 3000, leads: 34, conversions: 9,
+    cpl: 52.9, conversionRate: 26.5,
+  },
+  {
+    id: '2', name: 'Clareamento Dental — Verão', platform: 'google',
+    status: 'active', spent: 2400, budget: 4000, leads: 28, conversions: 7,
+    cpl: 85.7, conversionRate: 25.0,
+  },
+  {
+    id: '3', name: 'Reativação de Pacientes', platform: 'whatsapp',
+    status: 'ended', spent: 320, budget: 320, leads: 12, conversions: 5,
+    cpl: 26.7, conversionRate: 41.7,
+  },
+]
 
 function LeadCard({ lead }: { lead: Lead }) {
   const src = lead.source ? SOURCE_LABELS[lead.source] : null
@@ -86,18 +102,28 @@ function LeadCard({ lead }: { lead: Lead }) {
 export default function CRMPage() {
   const [activeView, setActiveView] = useState<'kanban' | 'campaigns'>('kanban')
   const [search, setSearch] = useState('')
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const filteredLeads = MOCK_LEADS.filter(l =>
+  useEffect(() => {
+    fetch('/api/leads').then(r => r.json()).then(setLeads).finally(() => setLoading(false))
+  }, [])
+
+  const updateLeadStatus = async (id: string, status: LeadStatus) => {
+    const res = await fetch(`/api/leads/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    if (res.ok) { const updated = await res.json(); setLeads(prev => prev.map(l => l.id === id ? updated : l)) }
+  }
+
+  const filteredLeads = leads.filter(l =>
     l.name.toLowerCase().includes(search.toLowerCase()) ||
     (l.interest || '').toLowerCase().includes(search.toLowerCase())
   )
 
-  const totalLeads = MOCK_LEADS.length
-  const converted = MOCK_LEADS.filter(l => l.status === 'CONVERTED').length
-  const conversionRate = ((converted / totalLeads) * 100).toFixed(1)
-  const totalCampaignSpend = MOCK_CAMPAIGNS.reduce((s, c) => s + c.spent, 0)
-  const totalCampaignLeads = MOCK_CAMPAIGNS.reduce((s, c) => s + c.leads, 0)
-  const avgCPL = totalCampaignSpend / totalCampaignLeads
+  const totalLeads = leads.length
+  const converted = leads.filter(l => l.status === 'CONVERTED').length
+  const conversionRate = totalLeads > 0 ? ((converted / totalLeads) * 100).toFixed(1) : '0'
+  const totalCampaignSpend = 0
+  const avgCPL = 0
 
   return (
     <div className="animate-fade-in">

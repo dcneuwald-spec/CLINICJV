@@ -1,18 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/header'
 import {
-  ChevronLeft, ChevronRight, Plus, Filter, Search,
-  Phone, MessageCircle, CheckCircle2, Clock, X, Info,
+  ChevronLeft, ChevronRight, Plus,
+  Phone, MessageCircle, CheckCircle2, X, Info,
 } from 'lucide-react'
-import {
-  MOCK_APPOINTMENTS, MOCK_PROFESSIONALS,
-} from '@/lib/mock-data'
 import {
   cn, formatTime, formatDate, getAppointmentStatusLabel, getAppointmentStatusColor,
 } from '@/lib/utils'
-import type { Appointment, AppointmentStatus } from '@/types'
+import type { Appointment, AppointmentStatus, Professional } from '@/types'
 
 const STATUS_FLOW: AppointmentStatus[] = [
   'SCHEDULED', 'CONFIRMED', 'WAITING', 'IN_PROGRESS', 'ATTENDED',
@@ -190,29 +187,45 @@ function AppointmentModal({
 }
 
 export default function AgendaPage() {
-  const [selectedDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedApt, setSelectedApt] = useState<Appointment | null>(null)
   const [filterProf, setFilterProf] = useState<string>('all')
-  const [appointments, setAppointments] = useState<Appointment[]>(MOCK_APPOINTMENTS)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [profList, setProfList] = useState<Professional[]>([])
 
-  const handleStatusChange = (id: string, status: AppointmentStatus) => {
-    setAppointments(prev =>
-      prev.map(a => a.id === id ? { ...a, status } : a)
-    )
+  useEffect(() => {
+    fetch('/api/professionals').then(r => r.json()).then(setProfList)
+  }, [])
+
+  useEffect(() => {
+    const dateStr = selectedDate.toISOString().slice(0, 10)
+    fetch(`/api/appointments?date=${dateStr}`).then(r => r.json()).then(setAppointments)
+  }, [selectedDate])
+
+  const handleStatusChange = async (id: string, status: AppointmentStatus) => {
+    const res = await fetch(`/api/appointments/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    if (res.ok) {
+      const updated = await res.json()
+      setAppointments(prev => prev.map(a => a.id === id ? updated : a))
+    }
+  }
+
+  const changeDate = (days: number) => {
+    setSelectedDate(prev => { const d = new Date(prev); d.setDate(d.getDate() + days); return d })
   }
 
   const filteredApts = filterProf === 'all'
     ? appointments
     : appointments.filter(a => a.professionalId === filterProf)
 
-  const aptsByProf = MOCK_PROFESSIONALS.reduce((acc, prof) => {
+  const aptsByProf = profList.reduce((acc, prof) => {
     acc[prof.id] = filteredApts.filter(a => a.professionalId === prof.id)
     return acc
   }, {} as Record<string, Appointment[]>)
 
   const professionals = filterProf === 'all'
-    ? MOCK_PROFESSIONALS
-    : MOCK_PROFESSIONALS.filter(p => p.id === filterProf)
+    ? profList
+    : profList.filter(p => p.id === filterProf)
 
   // Stats do dia
   const total = appointments.length
@@ -229,16 +242,16 @@ export default function AgendaPage() {
       <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-4 flex-wrap">
         {/* Navegação de data */}
         <div className="flex items-center gap-2">
-          <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={() => changeDate(-1)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
             <ChevronLeft size={16} className="text-slate-500" />
           </button>
           <span className="text-sm font-semibold text-slate-800 min-w-24 text-center">
             {formatDate(selectedDate.toISOString(), "dd/MM/yyyy")}
           </span>
-          <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={() => changeDate(1)} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors">
             <ChevronRight size={16} className="text-slate-500" />
           </button>
-          <button className="btn-secondary text-xs px-3 py-1.5">Hoje</button>
+          <button onClick={() => setSelectedDate(new Date())} className="btn-secondary text-xs px-3 py-1.5">Hoje</button>
         </div>
 
         <div className="h-5 w-px bg-slate-200" />
@@ -251,7 +264,7 @@ export default function AgendaPage() {
           >
             Todos
           </button>
-          {MOCK_PROFESSIONALS.map(p => (
+          {profList.map(p => (
             <button
               key={p.id}
               onClick={() => setFilterProf(p.id)}
