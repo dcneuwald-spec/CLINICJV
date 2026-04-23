@@ -12,11 +12,57 @@ import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
 import {
-  MOCK_CLINICS, MOCK_HEALTH_SCORES, MOCK_ACTION_PLANS,
-} from '@/lib/mock-data'
-import {
   cn, formatCurrency, getScoreColor, getScoreLabel, getScoreBg,
 } from '@/lib/utils'
+
+const CLINICS = [
+  { id: 'c1', name: 'Bella Vita Odontologia', tradeName: 'Bella Vita', specialty: 'Odontologia', city: 'São Paulo', state: 'SP' },
+  { id: 'c2', name: 'Clínica Prime Estética', tradeName: 'Prime Estética', specialty: 'Estética', city: 'Campinas', state: 'SP' },
+  { id: 'c3', name: 'FisioVita Reabilitação', tradeName: 'FisioVita', specialty: 'Fisioterapia', city: 'Curitiba', state: 'PR' },
+  { id: 'c4', name: 'Psico Bem Estar', tradeName: 'Psico Bem Estar', specialty: 'Psicologia', city: 'Belo Horizonte', state: 'MG' },
+]
+const SCORES: Record<string, { overallScore: number; occupancyRate: number; absenceRate: number; npsScore: number }> = {
+  c1: { overallScore: 78, occupancyRate: 76, absenceRate: 9, npsScore: 9.1 },
+  c2: { overallScore: 65, occupancyRate: 68, absenceRate: 11, npsScore: 8.6 },
+  c3: { overallScore: 54, occupancyRate: 61, absenceRate: 18, npsScore: 8.0 },
+  c4: { overallScore: 43, occupancyRate: 52, absenceRate: 22, npsScore: 7.5 },
+}
+const PLANS = [
+  {
+    id: 'p1', title: 'Reduzir Taxa de Faltas — Bella Vita', description: 'Implementar confirmações automáticas 24h antes via WhatsApp.',
+    priority: 'high' as const, status: 'in_progress' as const, dueDate: '2025-03-31',
+    tasks: [
+      { id: 't1', title: 'Configurar mensagem de confirmação', completed: true },
+      { id: 't2', title: 'Ativar lembretes automáticos', completed: true },
+      { id: 't3', title: 'Monitorar por 30 dias', completed: false },
+    ],
+  },
+  {
+    id: 'p2', title: 'Reativar Pacientes Inativos — FisioVita', description: 'Campanha de reativação para pacientes sem visita há 60+ dias.',
+    priority: 'medium' as const, status: 'open' as const, dueDate: '2025-04-30',
+    tasks: [
+      { id: 't4', title: 'Segmentar inativos no CRC', completed: false },
+      { id: 't5', title: 'Criar templates de mensagem', completed: false },
+    ],
+  },
+]
+
+const clinicsWithScores = CLINICS.map(c => ({ ...c, score: SCORES[c.id] }))
+  .filter(c => c.score)
+  .sort((a, b) => b.score.overallScore - a.score.overallScore)
+
+const ALERTS = [
+  { clinicId: 'c4', message: 'Psico Bem Estar: Score abaixo de 45 — Atenção crítica necessária', severity: 'critical' },
+  { clinicId: 'c3', message: 'FisioVita: Taxa de faltas em 18% — acima do limite configurado (15%)', severity: 'warning' },
+  { clinicId: 'c3', message: 'FisioVita: Crescimento de receita negativo — 2º mês consecutivo', severity: 'warning' },
+  { clinicId: 'c1', message: 'Bella Vita: Meta de faturamento 85% atingida — no prazo', severity: 'info' },
+]
+
+const rankChart = clinicsWithScores.map(c => ({
+  name: c.tradeName,
+  score: c.score.overallScore,
+  fill: c.score.overallScore >= 70 ? '#10B981' : c.score.overallScore >= 40 ? '#F59E0B' : '#EF4444',
+}))
 
 function ScoreMini({ score }: { score: number }) {
   const color = score >= 70 ? '#10B981' : score >= 40 ? '#F59E0B' : '#EF4444'
@@ -39,41 +85,16 @@ function ScoreMini({ score }: { score: number }) {
   )
 }
 
-const scoresByClinic = MOCK_HEALTH_SCORES.reduce((acc, s) => {
-  acc[s.clinicId] = s
-  return acc
-}, {} as Record<string, typeof MOCK_HEALTH_SCORES[0]>)
-
-const clinicsWithScores = MOCK_CLINICS.map(clinic => ({
-  ...clinic,
-  score: scoresByClinic[clinic.id],
-})).filter(c => c.score).sort((a, b) => (b.score?.overallScore || 0) - (a.score?.overallScore || 0))
-
-const ALERTS = [
-  { clinicId: 'clinic-04', message: 'Psico Bem Estar: Score abaixo de 45 — Atenção crítica necessária', severity: 'critical' },
-  { clinicId: 'clinic-03', message: 'FisioVita: Taxa de faltas em 18,5% — acima do limite configurado (15%)', severity: 'warning' },
-  { clinicId: 'clinic-03', message: 'FisioVita: Crescimento de receita negativo (-2,1%) — 2º mês consecutivo', severity: 'warning' },
-  { clinicId: 'clinic-01', message: 'Bella Vita: Meta de faturamento 85% atingida — no prazo', severity: 'info' },
-]
-
-const rankChart = clinicsWithScores.map(c => ({
-  name: c.tradeName || c.name,
-  score: c.score?.overallScore || 0,
-  fill: (c.score?.overallScore || 0) >= 70 ? '#10B981' : (c.score?.overallScore || 0) >= 40 ? '#F59E0B' : '#EF4444',
-}))
 
 export default function ConsultantPage() {
   const [selectedClinic, setSelectedClinic] = useState<string | null>(null)
 
   const avgScore = Math.round(
-    clinicsWithScores.reduce((s, c) => s + (c.score?.overallScore || 0), 0) / clinicsWithScores.length
+    clinicsWithScores.reduce((s, c) => s + c.score.overallScore, 0) / clinicsWithScores.length
   )
 
-  const criticalCount = clinicsWithScores.filter(c => (c.score?.overallScore || 0) < 40).length
-  const warningCount = clinicsWithScores.filter(c => {
-    const s = c.score?.overallScore || 0
-    return s >= 40 && s < 70
-  }).length
+  const criticalCount = clinicsWithScores.filter(c => c.score.overallScore < 40).length
+  const warningCount = clinicsWithScores.filter(c => c.score.overallScore >= 40 && c.score.overallScore < 70).length
 
   return (
     <div className="animate-fade-in">
@@ -117,7 +138,6 @@ export default function ConsultantPage() {
           </div>
           <div className="divide-y divide-slate-50">
             {ALERTS.map((alert, i) => {
-              const clinic = MOCK_CLINICS.find(c => c.id === alert.clinicId)
               return (
                 <div key={i} className={cn(
                   'flex items-start gap-3 px-5 py-3',
@@ -239,11 +259,10 @@ export default function ConsultantPage() {
           </div>
 
           <div className="divide-y divide-slate-50">
-            {MOCK_ACTION_PLANS.map(plan => {
+            {PLANS.map(plan => {
               const done = plan.tasks.filter(t => t.completed).length
               const total = plan.tasks.length
               const pct = Math.round((done / total) * 100)
-              const clinic = MOCK_CLINICS[0] // all in clinic-01
 
               const priorityConfig = {
                 critical: { label: 'Crítico', color: 'bg-red-100 text-red-700' },
@@ -267,7 +286,6 @@ export default function ConsultantPage() {
                         <p className="text-sm font-semibold text-slate-800">{plan.title}</p>
                         <span className={cn('badge text-[10px]', priorityConfig.color)}>{priorityConfig.label}</span>
                         <span className={cn('badge text-[10px]', statusConfig.color)}>{statusConfig.label}</span>
-                        <span className="badge bg-slate-100 text-slate-500 text-[10px]">{clinic.tradeName}</span>
                       </div>
                       <p className="text-xs text-slate-500 leading-relaxed mb-3">{plan.description}</p>
 
