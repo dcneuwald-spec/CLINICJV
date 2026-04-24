@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { Header } from '@/components/layout/header'
 import {
   Building2, Bell, CreditCard, Shield, Users, Calendar,
   MessageSquare, FileText, Database, Sliders, Save,
   ChevronRight, Wifi, WifiOff, RefreshCw, Send, CheckCircle2,
   Smartphone, Loader2, AlertTriangle, ExternalLink,
+  UserPlus, Eye, EyeOff, Pencil, UserX, UserCheck, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -328,6 +330,341 @@ function WhatsAppPanel() {
 }
 
 // ──────────────────────────────────────────────────
+// Painel de Usuários
+// ──────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN:        'Administrador',
+  MANAGER:      'Gestor',
+  CONSULTANT:   'Consultor',
+  PROFESSIONAL: 'Profissional',
+  RECEPTIONIST: 'Recepção',
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  ADMIN:        'bg-purple-100 text-purple-700',
+  MANAGER:      'bg-blue-100 text-blue-700',
+  CONSULTANT:   'bg-amber-100 text-amber-700',
+  PROFESSIONAL: 'bg-emerald-100 text-emerald-700',
+  RECEPTIONIST: 'bg-slate-100 text-slate-600',
+}
+
+type UserItem = {
+  id: string
+  name: string
+  email: string
+  role: string
+  phone?: string
+  active: boolean
+  createdAt: string
+}
+
+type UserFormData = {
+  name: string
+  email: string
+  password: string
+  role: string
+  phone: string
+}
+
+function UsersPanel() {
+  const { data: session } = useSession()
+  const canManage = ['ADMIN', 'MANAGER'].includes(session?.user?.role ?? '')
+
+  const [users, setUsers]         = useState<UserItem[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [editUser, setEditUser]   = useState<UserItem | null>(null)
+  const [showPass, setShowPass]   = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState('')
+  const [form, setForm]           = useState<UserFormData>({
+    name: '', email: '', password: '', role: 'RECEPTIONIST', phone: '',
+  })
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/users')
+      const data = await res.json()
+      if (Array.isArray(data)) setUsers(data)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  const openCreate = () => {
+    setEditUser(null)
+    setForm({ name: '', email: '', password: '', role: 'RECEPTIONIST', phone: '' })
+    setError('')
+    setShowPass(false)
+    setShowModal(true)
+  }
+
+  const openEdit = (u: UserItem) => {
+    setEditUser(u)
+    setForm({ name: u.name, email: u.email, password: '', role: u.role, phone: u.phone ?? '' })
+    setError('')
+    setShowPass(false)
+    setShowModal(true)
+  }
+
+  const handleSave = async () => {
+    setError('')
+    if (!form.name.trim() || !form.email.trim()) {
+      setError('Nome e e-mail são obrigatórios.')
+      return
+    }
+    if (!editUser && !form.password.trim()) {
+      setError('Senha é obrigatória para novos usuários.')
+      return
+    }
+    if (form.password && form.password.length < 6) {
+      setError('A senha deve ter ao menos 6 caracteres.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const payload: Record<string, string> = {
+        name:  form.name.trim(),
+        email: form.email.trim(),
+        role:  form.role,
+        phone: form.phone.trim(),
+      }
+      if (form.password) payload.password = form.password
+
+      const url    = editUser ? `/api/users/${editUser.id}` : '/api/users'
+      const method = editUser ? 'PUT' : 'POST'
+
+      const res  = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error ?? 'Erro ao salvar usuário.')
+        return
+      }
+
+      setShowModal(false)
+      await fetchUsers()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleToggleActive = async (u: UserItem) => {
+    try {
+      if (!u.active) {
+        await fetch(`/api/users/${u.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: true }),
+        })
+      } else {
+        await fetch(`/api/users/${u.id}`, { method: 'DELETE' })
+      }
+      await fetchUsers()
+    } catch {
+      // silently refresh
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 className="text-base font-semibold text-slate-800">Usuários do Sistema</h3>
+        {canManage && (
+          <button onClick={openCreate} className="btn-primary gap-2 text-sm">
+            <UserPlus size={14} /> Novo Usuário
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <Loader2 size={22} className="animate-spin text-slate-400" />
+        </div>
+      ) : users.length === 0 ? (
+        <div className="text-center py-10">
+          <Users size={28} className="text-slate-300 mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Nenhum usuário cadastrado.</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Nome</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">E-mail</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Perfil</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                {canManage && <th className="px-4 py-3" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {users.map(u => (
+                <tr key={u.id} className={cn('hover:bg-slate-50 transition-colors', !u.active && 'opacity-50')}>
+                  <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
+                  <td className="px-4 py-3 text-slate-500">{u.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={cn('inline-flex px-2 py-0.5 rounded-full text-xs font-semibold', ROLE_COLORS[u.role])}>
+                      {ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn(
+                      'inline-flex items-center gap-1 text-xs font-medium',
+                      u.active ? 'text-emerald-600' : 'text-slate-400',
+                    )}>
+                      <span className={cn('w-1.5 h-1.5 rounded-full', u.active ? 'bg-emerald-500' : 'bg-slate-300')} />
+                      {u.active ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  {canManage && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => openEdit(u)}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive(u)}
+                          className={cn(
+                            'p-1.5 rounded-lg transition-colors',
+                            u.active
+                              ? 'hover:bg-red-50 text-slate-400 hover:text-red-600'
+                              : 'hover:bg-emerald-50 text-slate-400 hover:text-emerald-600',
+                          )}
+                          title={u.active ? 'Desativar' : 'Reativar'}
+                        >
+                          {u.active ? <UserX size={13} /> : <UserCheck size={13} />}
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal criar / editar */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h4 className="text-base font-semibold text-slate-800">
+                {editUser ? 'Editar Usuário' : 'Novo Usuário'}
+              </h4>
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-700">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Nome completo</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                  className="input"
+                  placeholder="Ex: Maria Silva"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">E-mail</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  className="input"
+                  placeholder="maria@clinica.com.br"
+                  disabled={!!editUser}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
+                  {editUser ? 'Nova senha (deixe vazio para manter)' : 'Senha'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    className="input pr-10"
+                    placeholder={editUser ? '••••••' : 'Mínimo 6 caracteres'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  >
+                    {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Perfil de acesso</label>
+                <select
+                  value={form.role}
+                  onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
+                  className="input"
+                >
+                  {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">Telefone (opcional)</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                  className="input"
+                  placeholder="(11) 99999-9999"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-600 flex items-center gap-1.5">
+                  <AlertTriangle size={14} /> {error}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100">
+              <button onClick={() => setShowModal(false)} className="btn-secondary">
+                Cancelar
+              </button>
+              <button onClick={handleSave} disabled={saving} className="btn-primary gap-2 disabled:opacity-50">
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {saving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────
 // Página principal de configurações
 // ──────────────────────────────────────────────────
 
@@ -509,8 +846,11 @@ export default function SettingsPage() {
               </>
             )}
 
+            {/* Usuários */}
+            {activeSection === 'users' && <UsersPanel />}
+
             {/* Seções ainda não implementadas */}
-            {!['clinic', 'notifications', 'messages', 'security'].includes(activeSection) && (
+            {!['clinic', 'notifications', 'messages', 'security', 'users'].includes(activeSection) && (
               <div className="text-center py-12">
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                   <Sliders size={24} className="text-slate-400" />
