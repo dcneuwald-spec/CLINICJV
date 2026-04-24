@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (!session?.user?.clinicId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const { status, notes, cancelReason, title, startTime, duration } = body
+    const { status, notes, cancelReason, title, startTime, duration, professionalId } = body
 
     const data: any = {}
     if (status !== undefined) {
@@ -82,6 +82,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       data.endTime = new Date(new Date(startTime).getTime() + dur * 60000)
       data.duration = dur
     }
+    if (professionalId !== undefined) data.professionalId = professionalId
 
     const apt = await prisma.appointment.update({
       where: { id: params.id },

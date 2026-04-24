@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, Users, DollarSign, BarChart3,
   MessageSquare, Megaphone, Heart, TrendingUp, Target,
   Settings, LogOut, Building2, ClipboardList,
-  Star, Stethoscope, ChevronDown, ChevronRight,
+  Star, Stethoscope, ChevronDown, ChevronRight, Inbox,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
@@ -43,8 +43,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Relacionamento',
     items: [
-      { href: '/crc', label: 'CRC — Relacionamento', icon: <MessageSquare size={16} /> },
-      { href: '/crm', label: 'CRM — Captação',       icon: <Megaphone size={16} /> },
+      { href: '/crc',           label: 'CRC — Relacionamento', icon: <MessageSquare size={16} /> },
+      { href: '/crm',           label: 'CRM — Captação',       icon: <Megaphone size={16} /> },
+      { href: '/crm/contacts',  label: 'Caixa de Entrada',     icon: <Inbox size={16} /> },
     ],
   },
   {
