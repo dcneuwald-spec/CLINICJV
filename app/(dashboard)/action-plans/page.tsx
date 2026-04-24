@@ -6,14 +6,67 @@ import {
   Plus, Target, CheckCircle2, Clock, AlertTriangle,
   ChevronDown, ChevronUp, Edit3, Lightbulb,
 } from 'lucide-react'
-import { MOCK_ACTION_PLANS } from '@/lib/mock-data'
 import { cn, formatDate } from '@/lib/utils'
 
-export default function ActionPlansPage() {
-  const [expanded, setExpanded] = useState<string | null>(MOCK_ACTION_PLANS[0].id)
+type PlanStatus = 'open' | 'in_progress' | 'completed' | 'cancelled'
+type PlanPriority = 'critical' | 'high' | 'medium' | 'low'
+type Task = { id: string; title: string; completed: boolean; dueDate?: string }
+type ActionPlan = { id: string; title: string; description: string; priority: PlanPriority; status: PlanStatus; tasks: Task[]; kpiMetric?: string; targetValue?: string; dueDate?: string }
 
-  const open = MOCK_ACTION_PLANS.filter(p => p.status === 'open' || p.status === 'in_progress')
-  const done = MOCK_ACTION_PLANS.filter(p => p.status === 'completed')
+const ACTION_PLANS: ActionPlan[] = [
+  {
+    id: 'ap-1',
+    title: 'Reduzir Taxa de Faltas',
+    description: 'Implementar confirmações automáticas via WhatsApp 24h e 2h antes da consulta para reduzir a taxa de faltas abaixo de 10%.',
+    priority: 'high',
+    status: 'in_progress',
+    kpiMetric: 'absenceRate',
+    targetValue: '10',
+    dueDate: '2025-03-31',
+    tasks: [
+      { id: 't1', title: 'Configurar mensagem de confirmação no WhatsApp', completed: true, dueDate: '2025-02-20' },
+      { id: 't2', title: 'Ativar lembretes automáticos 24h antes', completed: true, dueDate: '2025-02-22' },
+      { id: 't3', title: 'Ativar lembretes automáticos 2h antes', completed: false, dueDate: '2025-03-01' },
+      { id: 't4', title: 'Monitorar resultados por 30 dias', completed: false, dueDate: '2025-03-31' },
+    ],
+  },
+  {
+    id: 'ap-2',
+    title: 'Aumentar Taxa de Retorno',
+    description: 'Criar régua de reativação para pacientes sem visita há 30+ dias usando CRC e campanhas automatizadas.',
+    priority: 'medium',
+    status: 'open',
+    kpiMetric: 'returnRate',
+    targetValue: '65',
+    dueDate: '2025-04-30',
+    tasks: [
+      { id: 't5', title: 'Segmentar pacientes inativos no CRC', completed: false, dueDate: '2025-03-10' },
+      { id: 't6', title: 'Criar templates de mensagem de reativação', completed: false, dueDate: '2025-03-15' },
+      { id: 't7', title: 'Disparar campanha piloto para 20 pacientes', completed: false, dueDate: '2025-03-20' },
+    ],
+  },
+  {
+    id: 'ap-3',
+    title: 'Otimizar Conversão de Orçamentos',
+    description: 'Aumentar taxa de aprovação de orçamentos de 62% para 70% com follow-up estruturado.',
+    priority: 'medium',
+    status: 'open',
+    kpiMetric: 'conversionRate',
+    targetValue: '70',
+    dueDate: '2025-05-31',
+    tasks: [
+      { id: 't8', title: 'Mapear etapas do funil de vendas', completed: false },
+      { id: 't9', title: 'Criar script de follow-up para orçamentos', completed: false },
+      { id: 't10', title: 'Treinar equipe na abordagem consultiva', completed: false },
+    ],
+  },
+]
+
+export default function ActionPlansPage() {
+  const [expanded, setExpanded] = useState<string | null>(ACTION_PLANS[0].id)
+
+  const open = ACTION_PLANS.filter(p => p.status === 'open' || p.status === 'in_progress')
+  const done = ACTION_PLANS.filter(p => p.status === 'completed')
 
   return (
     <div className="animate-fade-in">
@@ -50,8 +103,8 @@ export default function ActionPlansPage() {
           </div>
           <div className="card p-4 text-center">
             <p className="text-2xl font-bold text-slate-900">
-              {MOCK_ACTION_PLANS.reduce((s, p) => s + p.tasks.filter(t => t.completed).length, 0)}/
-              {MOCK_ACTION_PLANS.reduce((s, p) => s + p.tasks.length, 0)}
+              {ACTION_PLANS.reduce((s, p) => s + p.tasks.filter(t => t.completed).length, 0)}/
+              {ACTION_PLANS.reduce((s, p) => s + p.tasks.length, 0)}
             </p>
             <p className="text-xs text-slate-500 mt-0.5">Tarefas concluídas</p>
           </div>
@@ -59,7 +112,7 @@ export default function ActionPlansPage() {
 
         {/* Lista de planos */}
         <div className="space-y-4">
-          {MOCK_ACTION_PLANS.map(plan => {
+          {ACTION_PLANS.map(plan => {
             const doneTasks = plan.tasks.filter(t => t.completed).length
             const pct = Math.round((doneTasks / plan.tasks.length) * 100)
             const isExpanded = expanded === plan.id

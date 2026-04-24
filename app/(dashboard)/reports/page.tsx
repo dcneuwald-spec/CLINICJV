@@ -11,10 +11,35 @@ import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip,
   CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts'
-import {
-  APPOINTMENT_STATS, MONTHLY_REVENUE, PROCEDURES_MIX,
-} from '@/lib/mock-data'
 import { cn, formatCurrency } from '@/lib/utils'
+
+const APPOINTMENT_STATS = [
+  { name: 'Seg', atendidos: 18, faltas: 3, desmarcados: 2 },
+  { name: 'Ter', atendidos: 22, faltas: 4, desmarcados: 1 },
+  { name: 'Qua', atendidos: 20, faltas: 2, desmarcados: 3 },
+  { name: 'Qui', atendidos: 25, faltas: 5, desmarcados: 2 },
+  { name: 'Sex', atendidos: 19, faltas: 4, desmarcados: 2 },
+  { name: 'Sáb', atendidos: 12, faltas: 3, desmarcados: 0 },
+  { name: 'Dom', atendidos: 7, faltas: 2, desmarcados: 1 },
+]
+
+const MONTHLY_REVENUE = [
+  { name: 'Set', receita: 32000, despesas: 18000, lucro: 14000 },
+  { name: 'Out', receita: 35000, despesas: 19000, lucro: 16000 },
+  { name: 'Nov', receita: 30000, despesas: 17000, lucro: 13000 },
+  { name: 'Dez', receita: 28000, despesas: 16000, lucro: 12000 },
+  { name: 'Jan', receita: 36000, despesas: 20000, lucro: 16000 },
+  { name: 'Fev', receita: 38400, despesas: 21000, lucro: 17400 },
+]
+
+const PROCEDURES_MIX = [
+  { name: 'Limpeza/Profilaxia', value: 28, color: '#3B5FA8' },
+  { name: 'Restaurações', value: 22, color: '#577DBF' },
+  { name: 'Tratamento de Canal', value: 15, color: '#10B981' },
+  { name: 'Ortodontia', value: 18, color: '#F59E0B' },
+  { name: 'Próteses', value: 10, color: '#EF4444' },
+  { name: 'Outros', value: 7, color: '#94A3B8' },
+]
 
 const REPORT_CATEGORIES = [
   {

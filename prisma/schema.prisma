@@ -111,6 +111,12 @@ model ClinicSettings {
   // Cobrança
   debtReminderDays      Int[]     @default([3, 7, 15, 30])
 
+  // Google Calendar
+  googleAccessToken     String?
+  googleRefreshToken    String?
+  googleCalendarId      String?
+  googleTokenExpiry     DateTime?
+
   updatedAt             DateTime  @updatedAt
 
   @@map("clinic_settings")
@@ -319,6 +325,7 @@ model Appointment {
   cancelledAt     DateTime?
   checkedIn       Boolean           @default(false)
   checkedInAt     DateTime?
+  googleEventId   String?           // Google Calendar event ID
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 

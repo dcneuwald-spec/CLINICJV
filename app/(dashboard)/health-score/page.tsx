@@ -9,10 +9,30 @@ import {
   Heart, TrendingUp, TrendingDown, AlertTriangle,
   CheckCircle2, ArrowUpRight, Info, Lightbulb,
 } from 'lucide-react'
-import { MOCK_HEALTH_SCORES, HEALTH_SCORE_HISTORY } from '@/lib/mock-data'
 import {
   cn, formatCurrency, getScoreColor, getScoreBg, getScoreLabel,
 } from '@/lib/utils'
+
+const CURRENT_SCORE = {
+  overallScore: 72, patientScore: 78, productionScore: 68,
+  peopleScore: 74, processScore: 65, planningScore: 70, prosperityScore: 76,
+  occupancyRate: 71, absenceRate: 12, returnRate: 58, conversionRate: 62,
+  npsScore: 8.4, avgTicket: 580, defaultRate: 6, revenueGrowth: 8,
+}
+const PREV_SCORE = {
+  overallScore: 68, patientScore: 73, productionScore: 64,
+  peopleScore: 70, processScore: 62, planningScore: 67, prosperityScore: 72,
+  occupancyRate: 67, absenceRate: 14, returnRate: 55, conversionRate: 59,
+  npsScore: 8.1, avgTicket: 550, defaultRate: 7, revenueGrowth: 5,
+}
+const SCORE_HISTORY = [
+  { period: 'Set/24', score: 58 },
+  { period: 'Out/24', score: 61 },
+  { period: 'Nov/24', score: 59 },
+  { period: 'Dez/24', score: 64 },
+  { period: 'Jan/25', score: 68 },
+  { period: 'Fev/25', score: 72 },
+]
 
 const BENCHMARK: Record<string, number> = {
   occupancyRate: 75,
@@ -69,8 +89,8 @@ function ScoreGauge({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' 
 }
 
 export default function HealthScorePage() {
-  const current = MOCK_HEALTH_SCORES[0]
-  const prev = MOCK_HEALTH_SCORES[1]
+  const current = CURRENT_SCORE
+  const prev = PREV_SCORE
 
   const radarData = DIMENSIONS.map(d => ({
     subject: d.label,
@@ -200,7 +220,7 @@ export default function HealthScorePage() {
           <div className="card p-5">
             <h3 className="text-sm font-semibold text-slate-800 mb-4">Evolução do Score</h3>
             <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={HEALTH_SCORE_HISTORY} margin={{ top: 5, right: 5, bottom: 0, left: -30 }}>
+              <AreaChart data={SCORE_HISTORY} margin={{ top: 5, right: 5, bottom: 0, left: -30 }}>
                 <defs>
                   <linearGradient id="scoreAreaGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />

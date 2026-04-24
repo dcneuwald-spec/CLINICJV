@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/header'
 import Link from 'next/link'
 import {
-  ArrowLeft, Phone, MessageCircle, Star, Calendar, DollarSign,
-  FileText, Camera, Activity, AlertCircle, CheckCircle2, XCircle,
-  Edit3, Trash2, UserX, Printer, Search,
+  ArrowLeft, Phone, MessageCircle, Star, Calendar, FileText,
+  Camera, Activity, Edit3, Loader2,
 } from 'lucide-react'
-import {
-  MOCK_PATIENTS, MOCK_APPOINTMENTS, MOCK_TRANSACTIONS, MOCK_BUDGETS,
-} from '@/lib/mock-data'
 import {
   cn, formatDate, formatPhone, getAge, formatCurrency,
   getInitials, getAppointmentStatusLabel, getAppointmentStatusColor,
@@ -27,25 +23,116 @@ const TABS = [
   { id: 'anamnesis', label: 'Anamnese' },
 ]
 
+type Appointment = {
+  id: string
+  startTime: string
+  status: string
+  professional?: { name: string; color?: string }
+  procedures: { procedure: { name: string } }[]
+}
+
+type Transaction = {
+  id: string
+  dueDate: string
+  description: string
+  paymentMethod?: string
+  amount: number
+  status: string
+}
+
+type BudgetItem = {
+  id: string
+  description: string
+  quantity: number
+  totalPrice: number
+}
+
+type Budget = {
+  id: string
+  number: string
+  title?: string
+  status: string
+  createdAt: string
+  finalAmount: number
+  items: BudgetItem[]
+}
+
+type Patient = {
+  id: string
+  name: string
+  nickname?: string
+  registrationNum?: string
+  birthDate?: string
+  gender?: string
+  cpf?: string
+  phone: string
+  whatsapp?: string
+  email?: string
+  city?: string
+  state?: string
+  referralSource?: string
+  totalSpent: number
+  npsScore?: number
+  status: string
+  createdAt: string
+  appointments: Appointment[]
+  financials: Transaction[]
+  budgets: Budget[]
+}
+
 export default function PatientDetailPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState('overview')
+  const [patient, setPatient] = useState<Patient | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const patient = MOCK_PATIENTS.find(p => p.id === params.id) || MOCK_PATIENTS[0]
-  const appointments = MOCK_APPOINTMENTS.filter(a => a.patientId === patient.id)
-  const transactions = MOCK_TRANSACTIONS.filter(t => t.patientId === patient.id)
-  const budgets = MOCK_BUDGETS.filter(b => b.patientId === patient.id)
+  useEffect(() => {
+    fetch(`/api/patients/${params.id}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(setPatient)
+      .catch(() => setError('Paciente não encontrado'))
+      .finally(() => setLoading(false))
+  }, [params.id])
+
+  if (loading) {
+    return (
+      <div className="animate-fade-in">
+        <Header title="Paciente" subtitle="Carregando..." />
+        <div className="flex items-center justify-center h-64">
+          <Loader2 size={28} className="animate-spin text-brand-600" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !patient) {
+    return (
+      <div className="animate-fade-in">
+        <Header title="Paciente" subtitle="Erro" />
+        <div className="p-6">
+          <Link href="/patients" className="flex items-center gap-2 text-sm text-slate-500 hover:text-brand-600 transition-colors w-fit mb-4">
+            <ArrowLeft size={14} /> Voltar para Pacientes
+          </Link>
+          <div className="card p-12 text-center text-slate-400 text-sm">{error || 'Paciente não encontrado'}</div>
+        </div>
+      </div>
+    )
+  }
 
   const age = patient.birthDate ? getAge(patient.birthDate) : null
+  const appointments = patient.appointments ?? []
+  const transactions = patient.financials ?? []
+  const budgets = patient.budgets ?? []
+
   const attended = appointments.filter(a => a.status === 'ATTENDED').length
   const absent = appointments.filter(a => a.status === 'ABSENT').length
   const absenceRate = appointments.length > 0 ? ((absent / appointments.length) * 100).toFixed(0) : '0'
 
   return (
     <div className="animate-fade-in">
-      <Header title={patient.name} subtitle={`Prontuário ${patient.registrationNum}`} />
+      <Header title={patient.name} subtitle={patient.registrationNum ? `Prontuário ${patient.registrationNum}` : 'Prontuário'} />
 
       <div className="p-6 space-y-5">
-        {/* Breadcrumb */}
         <Link href="/patients" className="flex items-center gap-2 text-sm text-slate-500 hover:text-brand-600 transition-colors w-fit">
           <ArrowLeft size={14} />
           Voltar para Pacientes
@@ -54,12 +141,10 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
         {/* Header do paciente */}
         <div className="card p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Avatar */}
             <div className="w-16 h-16 rounded-2xl bg-brand-100 flex items-center justify-center flex-shrink-0">
               <span className="text-brand-700 text-2xl font-bold">{getInitials(patient.name)}</span>
             </div>
 
-            {/* Info principal */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-bold text-slate-900">{patient.name}</h2>
@@ -76,16 +161,13 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                 <a href={`tel:${patient.phone}`} className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-600 transition-colors">
                   <Phone size={14} /> {formatPhone(patient.phone)}
                 </a>
-                {patient.email && (
-                  <span className="text-sm text-slate-500">{patient.email}</span>
-                )}
+                {patient.email && <span className="text-sm text-slate-500">{patient.email}</span>}
                 {patient.referralSource && (
                   <span className="badge bg-purple-100 text-purple-700 text-xs">{patient.referralSource}</span>
                 )}
               </div>
             </div>
 
-            {/* Ações rápidas */}
             <div className="flex items-center gap-2 flex-wrap">
               <a
                 href={`https://wa.me/55${patient.phone.replace(/\D/g, '')}`}
@@ -99,15 +181,12 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                 <Calendar size={13} /> Agendar
               </button>
               <button className="btn-secondary text-xs gap-1.5">
-                <Search size={13} /> Consultar CPF
-              </button>
-              <button className="btn-secondary text-xs gap-1.5">
                 <Edit3 size={13} /> Editar
               </button>
             </div>
           </div>
 
-          {/* KPIs do paciente */}
+          {/* KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-slate-100">
             <div className="text-center">
               <p className="text-2xl font-bold text-slate-900">{appointments.length}</p>
@@ -150,10 +229,8 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
           </div>
         </div>
 
-        {/* Conteúdo das tabs */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Dados cadastrais */}
             <div className="card p-5">
               <h3 className="text-sm font-semibold text-slate-800 mb-4">Dados Cadastrais</h3>
               <div className="space-y-3">
@@ -177,7 +254,6 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
               </div>
             </div>
 
-            {/* Resumo financeiro */}
             <div className="card p-5">
               <h3 className="text-sm font-semibold text-slate-800 mb-4">Resumo Financeiro</h3>
               <div className="space-y-3">
@@ -241,8 +317,8 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                   {appointments.map(apt => (
                     <tr key={apt.id}>
                       <td className="font-medium">{apt.startTime.replace('T', ' ').slice(0, 16)}</td>
-                      <td>{apt.professionalName}</td>
-                      <td>{apt.procedures[0]?.procedureName || '—'}</td>
+                      <td>{apt.professional?.name || '—'}</td>
+                      <td>{apt.procedures[0]?.procedure?.name || '—'}</td>
                       <td>
                         <span className={cn('badge text-xs', getAppointmentStatusColor(apt.status))}>
                           {getAppointmentStatusLabel(apt.status)}
