@@ -83,6 +83,7 @@ model Clinic {
   healthScores    ClinicHealthScore[]
   consultants     ConsultantClinic[]
   actionPlans     ActionPlan[]
+  automations     Automation[]
 
   @@map("clinics")
 }
@@ -633,6 +634,27 @@ model ActionTask {
   actionPlan    ActionPlan  @relation(fields: [actionPlanId], references: [id], onDelete: Cascade)
 
   @@map("action_tasks")
+}
+
+// ============================
+// AUTOMAÇÕES DE CRM
+// ============================
+
+model Automation {
+  id              String   @id @default(cuid())
+  clinicId        String
+  name            String
+  triggerStage    String   // NEW, CONTACTED, SCHEDULED, CONVERTED, LOST
+  delayDays       Int      @default(1)
+  actionType      String   @default("whatsapp") // whatsapp, email, note
+  messageTemplate String
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("automations")
 }
 
 // ============================
