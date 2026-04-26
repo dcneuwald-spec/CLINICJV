@@ -14,6 +14,7 @@ import {
   cn, formatCurrency, formatDate, getTransactionStatusLabel, getPaymentMethodLabel,
 } from '@/lib/utils'
 import type { FinancialTransaction, TransactionType, TransactionStatus } from '@/types'
+import FinancialConfig from './config'
 
 const SUB_TABS = [
   { id: 'overview', label: 'Visão Geral' },
@@ -21,6 +22,7 @@ const SUB_TABS = [
   { id: 'payable', label: 'Contas a Pagar' },
   { id: 'cashflow', label: 'Fluxo de Caixa' },
   { id: 'dre', label: 'DRE Gerencial' },
+  { id: 'config', label: 'Configurações' },
 ]
 
 export default function FinancialPage() {
@@ -306,6 +308,9 @@ export default function FinancialPage() {
             </ResponsiveContainer>
           </div>
         )}
+
+        {/* Configurações */}
+        {activeTab === 'config' && <FinancialConfig />}
 
         {/* Contas a Receber */}
         {(activeTab === 'receivable' || activeTab === 'payable') && (

@@ -84,6 +84,9 @@ model Clinic {
   consultants     ConsultantClinic[]
   actionPlans     ActionPlan[]
   automations     Automation[]
+  accountPlans    AccountPlan[]
+  bankAccounts    BankAccount[]
+  cardFees        CardFee[]
 
   @@map("clinics")
 }
@@ -634,6 +637,62 @@ model ActionTask {
   actionPlan    ActionPlan  @relation(fields: [actionPlanId], references: [id], onDelete: Cascade)
 
   @@map("action_tasks")
+}
+
+// ============================
+// CONFIGURAÇÕES FINANCEIRAS
+// ============================
+
+model AccountPlan {
+  id        String   @id @default(cuid())
+  clinicId  String
+  code      String   // e.g., "1.1.1"
+  name      String
+  type      String   // REVENUE, EXPENSE
+  parentId  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clinic    Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  parent    AccountPlan? @relation("AccountPlanChildren", fields: [parentId], references: [id])
+  children  AccountPlan[] @relation("AccountPlanChildren")
+
+  @@map("account_plans")
+}
+
+model BankAccount {
+  id        String   @id @default(cuid())
+  clinicId  String
+  name      String
+  bank      String?
+  agency    String?
+  account   String?
+  type      String   @default("checking") // checking, savings, cash, investment
+  balance   Float    @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("bank_accounts")
+}
+
+model CardFee {
+  id           String   @id @default(cuid())
+  clinicId     String
+  brand        String   // visa, mastercard, elo, amex, hipercard
+  cardType     String   // credit, debit
+  installments String   // "1", "2-3", "4-6", "7-12"
+  feePercent   Float
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic       Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@map("card_fees")
 }
 
 // ============================
