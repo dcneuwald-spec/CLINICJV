@@ -15,6 +15,7 @@ import {
 } from '@/lib/utils'
 import type { FinancialTransaction, TransactionType, TransactionStatus } from '@/types'
 import FinancialConfig from './config'
+import ReconciliationTab from './reconciliation'
 
 const SUB_TABS = [
   { id: 'overview', label: 'Visão Geral' },
@@ -22,6 +23,7 @@ const SUB_TABS = [
   { id: 'payable', label: 'Contas a Pagar' },
   { id: 'cashflow', label: 'Fluxo de Caixa' },
   { id: 'dre', label: 'DRE Gerencial' },
+  { id: 'reconciliation', label: 'Conciliação' },
   { id: 'config', label: 'Configurações' },
 ]
 
@@ -308,6 +310,9 @@ export default function FinancialPage() {
             </ResponsiveContainer>
           </div>
         )}
+
+        {/* Conciliação */}
+        {activeTab === 'reconciliation' && <ReconciliationTab />}
 
         {/* Configurações */}
         {activeTab === 'config' && <FinancialConfig />}
