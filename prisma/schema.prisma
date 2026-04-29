@@ -84,6 +84,7 @@ model Clinic {
   consultants     ConsultantClinic[]
   actionPlans     ActionPlan[]
   automations     Automation[]
+  dailyReports    DailyReport[]
   accountPlans    AccountPlan[]
   bankAccounts    BankAccount[]
   cardFees        CardFee[]
@@ -637,6 +638,47 @@ model ActionTask {
   actionPlan    ActionPlan  @relation(fields: [actionPlanId], references: [id], onDelete: Cascade)
 
   @@map("action_tasks")
+}
+
+// ============================
+// PAINEL GERENCIAL DIÁRIO
+// ============================
+
+model DailyReport {
+  id                     String   @id @default(cuid())
+  clinicId               String
+  date                   DateTime @db.Date
+
+  // Financeiro
+  revenue                Float    @default(0)
+  ticketMedio            Float    @default(0)
+  attendedRevenue        Float    @default(0)
+
+  // Leads
+  leadsTotal             Int      @default(0)
+  leadsOrganic           Int      @default(0)
+  leadsClients           Int      @default(0)
+  leadsTraffic           Int      @default(0)
+  leadsReferral          Int      @default(0)
+  leadsScheduled         Int      @default(0)
+
+  // Atendimentos
+  attendedLeads          Int      @default(0)
+  attendedTraffic        Int      @default(0)
+  productsSold           Int      @default(0)
+  pa                     Float    @default(0)
+
+  // Reativações
+  reactivations7d        Int      @default(0)
+  reactivationsScheduled Int      @default(0)
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  clinic                 Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, date])
+  @@map("daily_reports")
 }
 
 // ============================

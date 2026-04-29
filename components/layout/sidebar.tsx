@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, Users, DollarSign, BarChart3,
   MessageSquare, Megaphone, Heart, TrendingUp, Target,
   Settings, LogOut, Building2, ClipboardList,
-  Star, Stethoscope, ChevronDown, ChevronRight, Inbox,
+  Star, Stethoscope, ChevronDown, ChevronRight, Inbox, PieChart,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
@@ -51,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Inteligência',
     items: [
+      { href: '/gerencial',    label: 'Gerencial',      icon: <PieChart size={16} /> },
       { href: '/health-score', label: 'Score de Saúde', icon: <Heart size={16} /> },
       { href: '/reports',      label: 'Relatórios',     icon: <BarChart3 size={16} /> },
       { href: '/goals',        label: 'Metas',          icon: <Target size={16} /> },
