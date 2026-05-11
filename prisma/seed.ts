@@ -78,6 +78,7 @@ async function main() {
     prisma.user.create({ data: { name: 'Gestor Demo', email: 'gestor@clinicjv.com.br', password: hash('demo123'), role: 'MANAGER' } }),
     prisma.user.create({ data: { name: 'Dr. Profissional', email: 'profissional@clinicjv.com.br', password: hash('demo123'), role: 'PROFESSIONAL' } }),
     prisma.user.create({ data: { name: 'Recepção Demo', email: 'recepcao@clinicjv.com.br', password: hash('demo123'), role: 'RECEPTIONIST' } }),
+    prisma.user.create({ data: { name: 'Karol Botelho', email: 'cliente@clinicjv.com.br', password: hash('demo123'), role: 'CLIENT' } }),
   ])
 
   const [adminUser, , managerUser, , receptionUser] = users

@@ -17,6 +17,7 @@ datasource db {
 enum UserRole {
   ADMIN
   CONSULTANT
+  CLIENT
   MANAGER
   PROFESSIONAL
   RECEPTIONIST
